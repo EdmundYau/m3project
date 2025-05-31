@@ -46,10 +46,14 @@ export default function PDFViewer({
 
   // Page-level scroll-based grayscale fade
   const [scrollGray, setScrollGray] = useState(0);
+  const maxScrollGray = useRef(0);
+
 
   useEffect(() => {
     if (grayscale !== "fade") {
       setScrollGray(0);
+      maxScrollGray.current = 0;
+
       return;
     }
 
@@ -58,7 +62,12 @@ export default function PDFViewer({
       const docHeight =
         document.documentElement.scrollHeight - window.innerHeight;
       const scrollProgress = Math.min(scrollTop / docHeight, 1);
-      setScrollGray(scrollProgress);
+
+      if (scrollProgress > maxScrollGray.current) {
+        maxScrollGray.current = scrollProgress;
+        setScrollGray(scrollProgress);
+      }
+      // else: do nothing (don't decrease grayscale)
     };
 
     window.addEventListener("scroll", handleScroll);
