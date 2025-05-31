@@ -2,3 +2,4 @@ GestureDataset/
 GestureDatasetBigger/
 TestGestures/
 venv/
+.DS_Store
