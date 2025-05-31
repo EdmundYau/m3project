@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { pdfjs, Document, Page } from "react-pdf";
 
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
@@ -22,8 +22,8 @@ export default function PDFViewer({
   grayscale = "none",
 }) {
   const [numPages, setNumPages] = useState();
-  const [containerRef, setContainerRef] = useState(null);
   const [containerWidth, setContainerWidth] = useState();
+  const containerRef = useRef(null);
 
   const onResize = useCallback((entries) => {
     const [entry] = entries;
@@ -32,30 +32,61 @@ export default function PDFViewer({
     }
   }, []);
 
-  function onDocumentLoadSuccess({ numPages: nextNumPages }) {
+  const onDocumentLoadSuccess = ({ numPages: nextNumPages }) => {
     setNumPages(nextNumPages);
-  }
+  };
 
-  // Optional: apply ResizeObserver (if you want dynamic resizing)
-  // useEffect(() => {
-  //   if (!containerRef) return;
-  //   const resizeObserver = new ResizeObserver(onResize);
-  //   resizeObserver.observe(containerRef);
-  //   return () => resizeObserver.disconnect();
-  // }, [containerRef, onResize]);
+  // Apply ResizeObserver
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, [onResize]);
+
+  // Page-level scroll-based grayscale fade
+  const [scrollGray, setScrollGray] = useState(0);
+
+  useEffect(() => {
+    if (grayscale !== "fade") {
+      setScrollGray(0);
+      return;
+    }
+
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const scrollProgress = Math.min(scrollTop / docHeight, 1);
+      setScrollGray(scrollProgress);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    handleScroll(); // initialize on load
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [grayscale]);
+
+  const filterStyle =
+    grayscale === "fade"
+      ? {
+          filter: `grayscale(${(scrollGray * 100).toFixed(0)}%)`,
+          transition: "filter 0.3s ease",
+        }
+      : grayscale === "gray"
+      ? {
+          filter: "grayscale(100%)",
+          transition: "none",
+        }
+      : {};
 
   return (
-    <div
-      className={`PDFViewer ${
-        grayscale === "fade"
-          ? "fade-grayscale"
-          : grayscale === "gray"
-          ? "instant-grayscale"
-          : ""
-      }`}
-    >
+    <div className="PDFViewer">
       <div className="PDFViewer__container">
-        <div className="PDFViewer__container__document" ref={setContainerRef}>
+        <div
+          className="PDFViewer__container__document"
+          ref={containerRef}
+          style={filterStyle}
+        >
           <Document
             file={file}
             onLoadSuccess={onDocumentLoadSuccess}
@@ -74,14 +105,12 @@ export default function PDFViewer({
         </div>
       </div>
       <style>{`
-        .fade-grayscale {
-          filter: grayscale(100%);
-          transition: filter 3s ease-in-out;
-        }
-        .instant-grayscale {
-          filter: grayscale(100%);
-          transition: none;
-        }
+
+  .PDFViewer__container__document {
+    width: 100%;
+    overflow-y: auto;
+        width: 2500px;
+  }
       `}</style>
     </div>
   );
