@@ -26,3 +26,4 @@ dist-ssr
 GestureDataset/
 GestureDatasetBigger/
 TestGestures/
+package-lock.json

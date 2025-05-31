@@ -1,17 +1,24 @@
-import { useState } from 'react'
-import './App.css'
-import GestureCollector from './GestureCollector'
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import GestureCollector from "./GestureCollector";
+import Navbar from "./components/Navbar";
 
-function App() {
 
 
+const App = () => {
   return (
-    <>
-      <div className="App">
-        <GestureCollector />
-      </div>
-    </>
-  );
-}
+    <Router>
+      <Navbar />
 
-export default App
+      <Routes>
+        <Route path="/" element={<GestureCollector />} />
+        <Route path="/knn" element={<GestureCollector model="knn" />} />
+        <Route path="/rf" element={<GestureCollector model="rf" />} />
+        <Route path="/svm" element={<GestureCollector model="svm" />} />
+        
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;

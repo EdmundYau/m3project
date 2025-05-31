@@ -1,8 +1,11 @@
 import React, { useRef, useState } from "react";
 import { saveAs } from "file-saver";
 import { v4 as uuidv4 } from "uuid";
+import { Link } from "react-router-dom"; // ADD THIS!
+import PDFViewer from "./components/PDFViewer"; // Adjust the import path as necessary
 
-const GestureCollector = () => {
+
+const GestureCollector = ({ model }) => {
   const canvasRef = useRef(null);
   const [drawing, setDrawing] = useState(false);
   const [points, setPoints] = useState([]);
@@ -10,6 +13,8 @@ const GestureCollector = () => {
   const [selectedShape, setSelectedShape] = useState("square");
   const [gestures, setGestures] = useState([]);
   const [gestureStartTime, setGestureStartTime] = useState(null);
+  const [grayscale, setGrayscale] = useState("none"); // New grayscale state
+  const [prediction, setPrediction] = useState(""); // NEW: Store the latest prediction
 
   function extractFeatures(points, maxSequenceLength = 100) {
     // Extract x and y arrays
@@ -52,33 +57,6 @@ const GestureCollector = () => {
 
     return flattened;
   }
-
-  const handleSendPredictionSVM = async () => {
-
-    // Preprocess using extractFeatures or preprocessGestureWithVelocity, depending on your model setup
-    const processedGesture = extractFeatures(points, 100); // Replace with the right preprocessing function
-
-    if (!processedGesture) {
-      alert("Invalid gesture. Not enough data points or no movement.");
-      return;
-    }
-
-    try {
-      const response = await fetch("http://localhost:8000/predict-svm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ points: processedGesture }),
-      });
-
-      const data = await response.json();
-      alert(`SVM Prediction: ${data.prediction}`);
-    } catch (error) {
-      console.error("Error sending SVM prediction:", error);
-      alert("Error sending SVM prediction. Check console for details.");
-    }
-  };
-  
-  
 
   function preprocessGestureWithVelocity(
     points,
@@ -200,31 +178,6 @@ const GestureCollector = () => {
 
   // Add this inside your component:
 
-  const handleSendPrediction = async () => {
-
-    // Preprocess the gesture
-    const processedGesture = preprocessGestureWithVelocity(points);
-    if (!processedGesture) {
-      alert("Invalid gesture. Not enough data points or no movement.");
-      return;
-    }
-
-    try {
-      const response = await fetch("http://localhost:8000/predict-rf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ points: processedGesture }),
-      });
-
-      const data = await response.json();
-      alert(`Prediction: ${data.prediction}`);
-    } catch (error) {
-      console.error("Error sending prediction:", error);
-      alert("Error sending prediction. Check console for details.");
-    }
-  };
-
-
   const preprocessGesture = (
     rawPoints,
     targetNumPoints = 16,
@@ -299,26 +252,144 @@ const GestureCollector = () => {
     return flattened;
   };
 
-  const handlePredictGesture = async () => {
-    if (points.length === 0) {
-      alert("Please draw a gesture first.");
+  // Clear button handler
+  const handleClear = () => {
+    setPoints([]);
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+  };
+
+  const handlePredict = async (currentPoints) => {
+    let processedGesture;
+    switch (model) {
+      case "knn":
+        processedGesture = preprocessGesture(currentPoints);
+        break;
+      case "rf":
+        processedGesture = preprocessGestureWithVelocity(currentPoints);
+        break;
+      case "svm":
+        processedGesture = extractFeatures(currentPoints, 100);
+        break;
+      default:
+        alert("Invalid model specified.");
+        return;
+    }
+
+    if (!processedGesture) {
+      alert("Invalid gesture. Not enough data points or no movement.");
       return;
     }
 
-    const preprocessedPoints = preprocessGesture(points);
-    console.log("Preprocessed points:", preprocessedPoints);
+    let endpoint = "";
+    switch (model) {
+      case "knn":
+        endpoint = "http://localhost:8000/predict";
+        break;
+      case "rf":
+        endpoint = "http://localhost:8000/predict-rf";
+        break;
+      case "svm":
+        endpoint = "http://localhost:8000/predict-svm";
+        break;
+      default:
+        console.error("Invalid model selected");
+        return;
+    }
 
     try {
-      const response = await fetch("http://localhost:8000/predict", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ points: preprocessedPoints }),
+        body: JSON.stringify({ points: processedGesture }),
       });
       const data = await response.json();
-      alert(`Predicted Shape: ${data.prediction}`);
+      setPrediction(data.prediction); // Set the prediction text here
+
+      // alert(`${model.toUpperCase()} Prediction: ${data.prediction}`);
+      // Handle grayscale logic based on prediction
+      switch (data.prediction.toLowerCase()) {
+        case "square":
+          setGrayscale("fade");
+          break;
+        case "triangle":
+          setGrayscale("gray");
+          break;
+        case "circle":
+          setGrayscale("none");
+          break;
+        default:
+          break;
+      }
     } catch (error) {
       console.error("Prediction error:", error);
-      alert("Error during prediction.");
+      alert("Error during prediction. Check console for details.");
+    }
+  };
+  const handlePredictButton = async () => {
+    let processedGesture;
+    switch (model) {
+      case "knn":
+        processedGesture = preprocessGesture(points);
+        break;
+      case "rf":
+        processedGesture = preprocessGestureWithVelocity(points);
+        break;
+      case "svm":
+        processedGesture = extractFeatures(points, 100);
+        break;
+      default:
+        alert("Invalid model specified.");
+        return;
+    }
+
+    if (!processedGesture) {
+      alert("Invalid gesture. Not enough data points or no movement.");
+      return;
+    }
+
+    let endpoint = "";
+    switch (model) {
+      case "knn":
+        endpoint = "http://localhost:8000/predict";
+        break;
+      case "rf":
+        endpoint = "http://localhost:8000/predict-rf";
+        break;
+      case "svm":
+        endpoint = "http://localhost:8000/predict-svm";
+        break;
+      default:
+        console.error("Invalid model selected");
+        return;
+    }
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ points: processedGesture }),
+      });
+      const data = await response.json();
+      setPrediction(data.prediction); // Set the prediction text here
+      switch (data.prediction.toLowerCase()) {
+        case "square":
+          setGrayscale("fade");
+          break;
+        case "triangle":
+          setGrayscale("gray");
+          break;
+        case "circle":
+          setGrayscale("none");
+          break;
+        default:
+          break;
+      }
+
+      // alert(`${model.toUpperCase()} Prediction: ${data.prediction}`);
+    } catch (error) {
+      console.error("Prediction error:", error);
+      alert("Error during prediction. Check console for details.");
     }
   };
 
@@ -391,6 +462,10 @@ const GestureCollector = () => {
         gestureDuration: duration,
       }));
       setPoints(updatedPoints);
+
+      if (model === "knn" || model === "rf" || model === "svm") {
+        handlePredict(updatedPoints);
+      }
     }
   };
 
@@ -451,101 +526,158 @@ const GestureCollector = () => {
 
   return (
     <>
-      <div style={{ padding: "20px" }}>
-        <h2>Gesture Collector</h2>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            htmlFor="username"
-            style={{ display: "block", marginBottom: "5px" }}
-          >
-            Your Name:
-          </label>
-          <input
-            id="username"
-            type="text"
-            placeholder="Enter your name"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            style={{ padding: "5px", width: "200px" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "15px" }}>
-          <p style={{ marginBottom: "5px" }}>Select shape to draw:</p>
-          <div style={{ display: "flex", gap: "15px" }}>
-            {["square", "circle", "triangle"].map((shape) => (
+      <div>
+        {/* Only show name input and shape selection on "/" */}
+        {!model && (
+          <>
+            <div style={{ marginBottom: "15px" }}>
               <label
-                key={shape}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  cursor: "pointer",
-                }}
+                htmlFor="username"
+                style={{ display: "block", marginBottom: "5px" }}
               >
-                <input
-                  type="radio"
-                  name="shape"
-                  value={shape}
-                  checked={selectedShape === shape}
-                  onChange={() => setSelectedShape(shape)}
-                  style={{ marginRight: "5px" }}
-                />
-                {shape.charAt(0).toUpperCase() + shape.slice(1)}
+                Your Name:
               </label>
-            ))}
+              <input
+                id="username"
+                type="text"
+                placeholder="Enter your name"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                style={{ padding: "5px", width: "200px" }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <p style={{ marginBottom: "5px" }}>Select shape to draw:</p>
+              <div style={{ display: "flex", gap: "15px" }}>
+                {["square", "circle", "triangle"].map((shape) => (
+                  <label
+                    key={shape}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="shape"
+                      value={shape}
+                      checked={selectedShape === shape}
+                      onChange={() => setSelectedShape(shape)}
+                      style={{ marginRight: "5px" }}
+                    />
+                    {shape.charAt(0).toUpperCase() + shape.slice(1)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Classifier view (canvas + PDF side by side) */}
+        {model ? (
+          <div style={{ display: "flex", gap: "20px" }}>
+            {/* Canvas */}
+            <div
+              style={{
+                position: "sticky",
+                top: "20px",
+                alignSelf: "flex-start",
+              }}
+            >
+              <div>
+              <canvas
+                ref={canvasRef}
+                width={400}
+                height={400}
+                style={{ border: "1px solid black" }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={() => setDrawing(false)}
+              ></canvas>
+
+              <div style={{ marginTop: "20px" }}>
+                <button
+                  onClick={handlePredictButton}
+                  style={{ padding: "5px 10px", marginRight: "10px" }}
+                >
+                  Predict Gesture ({model.toUpperCase()})
+                </button>
+                <button onClick={handleClear} style={{ padding: "5px 10px" }}>
+                  Clear Canvas
+                </button>
+              </div>
+            </div>
+            {prediction && (
+              <div style={{ marginTop: "15px" }}>
+                <p>
+                  <strong>Prediction:</strong> {prediction}
+                </p>
+              </div>
+            )}
+            </div>
+
+            {/* PDF Viewer */}
+            <div style={{ flex: 1, maxWidth: "600px" }}>
+              <PDFViewer grayscale={grayscale} />
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Canvas (only on main page) */}
+            <canvas
+              ref={canvasRef}
+              width={400}
+              height={400}
+              style={{ border: "1px solid black" }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={() => setDrawing(false)}
+            ></canvas>
 
-        <canvas
-          ref={canvasRef}
-          width={400}
-          height={400}
-          style={{ border: "1px solid black" }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={() => setDrawing(false)}
-        ></canvas>
+            {/* Save/Download/Clear Buttons */}
+            <div style={{ marginTop: "15px" }}>
+              <button
+                onClick={handleSaveGesture}
+                style={{ marginRight: "10px", padding: "5px 10px" }}
+              >
+                Save{" "}
+                {selectedShape.charAt(0).toUpperCase() + selectedShape.slice(1)}
+              </button>
+              <button
+                onClick={handleDownloadGestures}
+                style={{ marginRight: "10px", padding: "5px 10px" }}
+              >
+                Download as CSV
+              </button>
+              <button onClick={handleClear} style={{ padding: "5px 10px" }}>
+                Clear Canvas
+              </button>
+            </div>
+            {prediction && (
+              <div style={{ marginTop: "15px" }}>
+                <p>
+                  <strong>Prediction:</strong> {prediction}
+                </p>
+              </div>
+            )}
 
-        <div style={{ marginTop: "15px" }}>
-          <button
-            onClick={handleSaveGesture}
-            style={{ marginRight: "10px", padding: "5px 10px" }}
-          >
-            Save{" "}
-            {selectedShape.charAt(0).toUpperCase() + selectedShape.slice(1)}
-          </button>
-          <button
-            onClick={handleDownloadGestures}
-            style={{ padding: "5px 10px" }}
-          >
-            Download as CSV
-          </button>
-        </div>
-
-        <div style={{ marginTop: "10px" }}>
-          <p>{gestures.length} gestures collected</p>
-          <ul>
-            {["square", "circle", "triangle"].map((shape) => (
-              <li key={shape}>
-                {shape}: {gestures.filter((g) => g.shape === shape).length}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <button onClick={handlePredictGesture} style={{ padding: "5px 10px" }}>
-          Predict Gesture (KNN)
-        </button>
-        <button onClick={handleSendPrediction} style={{ padding: "5px 10px" }}>
-          Predict Gesture (RF)
-        </button>
-        <button
-          onClick={handleSendPredictionSVM}
-          style={{ padding: "5px 10px" }}
-        >
-          Predict Gesture (SVM)
-        </button>
+            {/* Summary */}
+            <div style={{ marginTop: "10px" }}>
+              <p>{gestures.length} gestures collected</p>
+              <ul>
+                {["square", "circle", "triangle"].map((shape) => (
+                  <li key={shape}>
+                    {shape}: {gestures.filter((g) => g.shape === shape).length}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
