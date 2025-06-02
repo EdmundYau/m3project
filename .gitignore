@@ -1,5 +1,9 @@
 GestureDataset/
 GestureDatasetBigger/
 TestGestures/
+AddGestureDataset/
+AgainGesture/
 venv/
+Onemore/
 .DS_Store
+oldmodels/

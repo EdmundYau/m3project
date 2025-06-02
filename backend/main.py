@@ -7,8 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 # Load the trained model and label encoder
-knn_model = joblib.load('knn_modelbigger.pkl')
-label_encoder = joblib.load('label_encoderbigger.pkl')
+knn_model = joblib.load('knn_model.pkl')
+label_encoder = joblib.load('label_encoder.pkl')
 
 #load random forest model
 rf_model = joblib.load('random_forest_model.pkl')
