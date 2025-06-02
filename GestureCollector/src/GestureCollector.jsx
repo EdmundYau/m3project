@@ -321,6 +321,8 @@ const GestureCollector = ({ model }) => {
         default:
           break;
       }
+      handleClear();
+
     } catch (error) {
       console.error("Prediction error:", error);
       alert("Error during prediction. Check console for details.");
@@ -385,6 +387,8 @@ const GestureCollector = ({ model }) => {
         default:
           break;
       }
+      handleClear();
+
 
       // alert(`${model.toUpperCase()} Prediction: ${data.prediction}`);
     } catch (error) {
