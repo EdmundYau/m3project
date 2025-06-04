@@ -4,39 +4,56 @@ let squareEffectStartScroll = null;
 // Add this global variable to track the current grayscale level
 let currentGrayscaleLevel = 0;
 
+// Add these global variables near the top with your other globals
+let currentDarknessLevel = 0;  // For triangle's darkness effect
+
 function applyEffect(prediction) {
-    removeEffects(); // Clear any existing effects first
+    // Don't reset all effects, just remove listeners and specific effects
+
+    // Remove any existing scroll listeners first
+    window.removeEventListener('scroll', handleScrollGrayscale);
+    window.removeEventListener('scroll', handleScrollDarkness);
+
+    // Remove any black overlay
+    const blackOverlay = document.getElementById('black-overlay');
+    if (blackOverlay) {
+        blackOverlay.remove();
+    }
 
     switch (prediction.toLowerCase()) {
         case 'triangle':
-            document.documentElement.style.filter = 'grayscale(100%)';
+            // Keep current grayscale level but reset darkness
+            currentDarknessLevel = 0;
+
+            // Apply current grayscale with initial brightness
+            document.documentElement.style.filter = `grayscale(${currentGrayscaleLevel}%) brightness(100%)`;
+
+            // Add scroll listener for darkness effect
+            window.addEventListener('scroll', handleScrollDarkness);
             break;
+
         case 'square':
-            // Reset the grayscale level when starting the effect
-            currentGrayscaleLevel = 0;
+            // Keep the current grayscale level, just update the filter
             document.documentElement.style.filter = `grayscale(${currentGrayscaleLevel}%)`;
+
+            // Add scroll listener to continue increasing grayscale
             window.addEventListener('scroll', handleScrollGrayscale);
             break;
+
         case 'circle':
+            // Only circle completely resets all effects
             removeEffects();
             break;
+
         default:
             console.log("Unknown prediction, no effect applied");
     }
 }
 
-function removeEffects() {
-    document.documentElement.style.filter = '';
-    window.removeEventListener('scroll', handleScrollGrayscale);
-    squareEffectStartScroll = null;
-    currentGrayscaleLevel = 0;
-}
-
-// Modified function that increases grayscale with any scroll direction
-// Modified function that increases grayscale more slowly with any scroll direction
+// Modified function for square that increases grayscale with any scroll direction
 function handleScrollGrayscale() {
-    // Increase grayscale level by a smaller increment (0.5 instead of 2)
-    currentGrayscaleLevel = Math.min(currentGrayscaleLevel + 0.5, 100);
+    // Increase grayscale level by a smaller increment (0.3 instead of 0.5 for slower effect)
+    currentGrayscaleLevel = Math.min(currentGrayscaleLevel + 0.45, 100);
     document.documentElement.style.filter = `grayscale(${currentGrayscaleLevel}%)`;
 
     // Optional: add a visual indicator at certain thresholds
@@ -50,7 +67,67 @@ function handleScrollGrayscale() {
     }
 }
 
+// Fix the handleScrollDarkness function to use the correct listener name
+function handleScrollDarkness() {
+    // Increase both grayscale and darkness gradually
+    // Grayscale increases faster than darkness
+    currentGrayscaleLevel = Math.min(currentGrayscaleLevel + 0.9, 100);
+    currentDarknessLevel = Math.min(currentDarknessLevel + 0.3, 100);
 
+    // Apply both filters
+    document.documentElement.style.filter = `grayscale(${currentGrayscaleLevel}%) brightness(${Math.max(100 - currentDarknessLevel, 0)}%)`;
+
+    // Optional: add visual indicators at certain thresholds
+    if (Math.round(currentGrayscaleLevel) % 20 === 0 && currentGrayscaleLevel > 0 && currentGrayscaleLevel < 100) {
+        showPrediction(`Grayscale: ${Math.round(currentGrayscaleLevel)}%`);
+    }
+
+    if (Math.round(currentDarknessLevel) % 20 === 0 && currentDarknessLevel > 0 && currentDarknessLevel < 100) {
+        showPrediction(`Darkness: ${Math.round(currentDarknessLevel)}%`);
+    }
+
+    // Create black overlay when reaching maximum darkness
+    if (currentDarknessLevel >= 100) {
+        window.removeEventListener('scroll', handleScrollDarkness);  // Fixed function name here
+
+        // Create black overlay for complete blackout
+        let overlay = document.getElementById('black-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'black-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.backgroundColor = 'black';
+            overlay.style.zIndex = '999999';
+            document.body.appendChild(overlay);
+        }
+
+        showPrediction("Screen fully darkened");
+    }
+}
+
+// Separate the full reset function (only used by circle gesture)
+function removeEffects() {
+    // Reset all filters
+    document.documentElement.style.filter = '';
+
+    // Remove all event listeners
+    window.removeEventListener('scroll', handleScrollGrayscale);
+    window.removeEventListener('scroll', handleScrollDarkness);
+
+    // Reset all levels
+    currentGrayscaleLevel = 0;
+    currentDarknessLevel = 0;
+
+    // Remove any overlay
+    const blackOverlay = document.getElementById('black-overlay');
+    if (blackOverlay) {
+        blackOverlay.remove();
+    }
+}
 function initializeCanvas() {
     canvas = document.createElement('canvas');
     canvas.className = 'gesture-canvas-overlay';
