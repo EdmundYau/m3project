@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Gesture PDF Controller",
+  "version": "1.0",
+  "description": "Hold Command key and drag to draw gestures",
+  "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "host_permissions": ["<all_urls>"]
+  
+}

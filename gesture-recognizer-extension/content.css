@@ -1,0 +1,23 @@
+.gesture-canvas-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  pointer-events: none;
+  background-color: transparent;
+}
+
+.gesture-prediction {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: rgba(0,0,0,0.7);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+  z-index: 10000;
+}

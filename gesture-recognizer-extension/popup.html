@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gesture PDF Controller</title>
+  <style>
+    body {
+      width: 250px;
+      padding: 10px;
+      font-family: Arial, sans-serif;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .info {
+      background-color: #f0f0f0;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    select {
+      width: 100%;
+      padding: 5px;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Gesture PDF Controller</h2>
+  </div>
+  
+  <div class="info">
+    <p><strong>Hold Command key</strong> and drag to draw a gesture</p>
+    <p><strong>Gestures:</strong></p>
+    <ul>
+      <li><strong>Circle:</strong> Normal mode</li>
+      <li><strong>Triangle:</strong> Grayscale</li>
+      <li><strong>Square:</strong> Dim screen</li>
+    </ul>
+  </div>
+
+  <div class="model-selection">
+    <label for="modelSelector">Select Model:</label>
+    <select id="modelSelector">
+      <option value="rf" selected>Random Forest (RF)</option>
+      <option value="knn">K-Nearest Neighbors (KNN)</option>
+      <option value="svm">Support Vector Machine (SVM)</option>
+    </select>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
